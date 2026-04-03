@@ -248,9 +248,12 @@ def add_export_request(user_id, post_link, stars_amount):
 def get_pending_exports():
     conn = get_db()
     c = conn.cursor()
-    c.execute('''SELECT e.id, e.user_id, e.post_link, e.stars_amount, u.username 
-                 FROM export_requests e JOIN users u ON e.user_id = u.user_id 
-                 WHERE e.status = 'pending''')
+    c.execute("""
+        SELECT e.id, e.user_id, e.post_link, e.stars_amount, u.username 
+        FROM export_requests e 
+        JOIN users u ON e.user_id = u.user_id 
+        WHERE e.status = 'pending'
+    """)
     rows = c.fetchall()
     conn.close()
     return rows
