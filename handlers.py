@@ -1,4 +1,4 @@
-from telegram import Update, ReplyKeyboardRemove
+from telegram import Update, ReplyKeyboardMarkup, ReplyKeyboardRemove
 from telegram.ext import ContextTypes, ConversationHandler
 from telegram.constants import ParseMode
 import database as db
@@ -67,12 +67,11 @@ async def show_product_details(update: Update, context: ContextTypes.DEFAULT_TYP
     )
     # Store product id in context for buy
     context.user_data['buy_product_id'] = product_id
-    await update.message.reply_text(text, reply_markup=ReplyKeyboardMarkup([["🛒 Buy Now", "🔙 Back"]], resize_keyboard=True))
+    await update.message.reply_text(text, reply_markup=kb.buy_keyboard())
 
 async def product_action(update: Update, context: ContextTypes.DEFAULT_TYPE):
     text = update.message.text
     if text == "🛒 Buy Now":
-        # Start buy conversation
         return await buy_start(update, context)
     elif text == "🔙 Back":
         await show_shop(update, context)
@@ -99,17 +98,16 @@ async def buy_password(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text("Purchase cancelled.", reply_markup=kb.main_menu_keyboard())
         return ConversationHandler.END
     context.user_data['buy_password'] = update.message.text
-    # Show payment instructions
-    instructions = (
-        "💳 Please send payment to:\n"
-        "bKash/Nagad: 01XXXXXXXXX\n"
-        "Amount: {price}৳\n\n"
-        "After payment, send the transaction ID or screenshot here."
-    )
     prod_id = context.user_data.get('buy_product_id')
     prod = db.get_product(prod_id)
     price = prod[3]
-    await update.message.reply_text(instructions.format(price=price), reply_markup=ReplyKeyboardMarkup([["✅ I have paid", "🔙 Back"]], resize_keyboard=True))
+    instructions = (
+        f"💳 Please send payment to:\n"
+        f"bKash/Nagad: 01XXXXXXXXX\n"
+        f"Amount: {price}৳\n\n"
+        f"After payment, send the transaction ID or screenshot here."
+    )
+    await update.message.reply_text(instructions, reply_markup=ReplyKeyboardMarkup([["✅ I have paid", "🔙 Back"]], resize_keyboard=True))
     return WAITING_PAYMENT_PROOF
 
 async def buy_payment_proof(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -150,7 +148,6 @@ async def stars_action(update: Update, context: ContextTypes.DEFAULT_TYPE):
         user = db.get_user(user_id)
         falling = user[3]
         if falling >= rate:
-            # Convert as many as possible
             amount = falling // rate
             db.convert_falling_to_stellar(user_id, amount)
             await update.message.reply_text(f"✅ Converted {amount*rate} Falling Stars to {amount} Stellar Stars!")
@@ -165,8 +162,6 @@ async def stars_action(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text("Use buttons.", reply_markup=kb.stars_menu_keyboard())
 
 async def show_redeem_products(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    # For redeem, we need to know stellar star cost per product. We'll add a new column or use a setting.
-    # For simplicity, assume each product costs 1 Stellar Star. Can be extended.
     products = db.get_all_products(active_only=True)
     text = "🌟 Redeem Products (1 Stellar Star each):\n"
     for p in products:
@@ -178,7 +173,6 @@ async def redeem_action(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if text == "🔙 Back":
         await show_stars(update, context)
         return
-    # Find product
     products = db.get_all_products(active_only=True)
     selected = None
     for p in products:
@@ -192,12 +186,8 @@ async def redeem_action(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user = db.get_user(user_id)
     stellar = user[4]
     if stellar >= 1:
-        # Deduct star and create order as free? Or just send credentials directly? We'll create an order with status approved and zero payment.
-        # For simplicity, create order with status approved and add note.
         db.update_user_stars(user_id, stellar_delta=-1)
-        # Send product credentials? Here you'd provide login details. We'll just send a success message.
         await update.message.reply_text(f"✅ Redeemed Successfully! {selected[1]} credentials will be sent shortly.")
-        # Optionally send a dummy credential
         await update.message.reply_text(f"🔐 Here is your {selected[1]} login:\nEmail: temp@example.com\nPass: redeem123")
     else:
         await update.message.reply_text("❌ You don't have enough Stellar Stars.")
@@ -217,14 +207,14 @@ async def export_post_link(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text("Export cancelled.", reply_markup=kb.main_menu_keyboard())
         return ConversationHandler.END
     link = update.message.text
-    # Validate link (basic)
     if not re.match(r"https?://t\.me/", link):
         await update.message.reply_text("Please send a valid Telegram post link (t.me/...).")
         return EXPORT_POST_LINK
     context.user_data['export_link'] = link
     min_stars = int(db.get_setting("export_min_stars"))
     max_stars = int(db.get_setting("export_max_stars"))
-    await update.message.reply_text(f"Select stars to export (min {min_stars}, max {max_stars}):", reply_markup=ReplyKeyboardMarkup([[str(i) for i in range(min_stars, max_stars+1)], ["🔙 Back"]], resize_keyboard=True))
+    buttons = [[str(i) for i in range(min_stars, max_stars+1)], ["🔙 Back"]]
+    await update.message.reply_text(f"Select stars to export (min {min_stars}, max {max_stars}):", reply_markup=ReplyKeyboardMarkup(buttons, resize_keyboard=True))
     return EXPORT_SELECT_STARS
 
 async def export_select_stars(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -257,7 +247,6 @@ async def export_confirm(update: Update, context: ContextTypes.DEFAULT_TYPE):
         user = db.get_user(user_id)
         if user[4] >= stars:
             req_id = db.add_export_request(user_id, link, stars)
-            # Notify admins
             for admin_id in ADMIN_IDS:
                 await context.bot.send_message(admin_id, f"📤 New Export Request #{req_id}\nUser: {user_id}\nStars: {stars}\nLink: {link}\nUse /admin to approve.")
             await update.message.reply_text("⏳ Request sent to Admin. You will be notified once approved.", reply_markup=kb.main_menu_keyboard())
@@ -330,7 +319,6 @@ async def review_comment(update: Update, context: ContextTypes.DEFAULT_TYPE):
     db.add_review(user_id, product_id, rating, comment)
     auto_approve = int(db.get_setting("reviews_auto_approve"))
     if auto_approve:
-        # Auto approve logic: call approve_review after getting review_id? We need review_id. Let's implement simple: fetch latest review.
         conn = db.get_db()
         c = conn.cursor()
         c.execute("SELECT id FROM reviews WHERE user_id = ? AND product_id = ? ORDER BY created_at DESC LIMIT 1", (user_id, product_id))
@@ -348,7 +336,6 @@ async def view_reviews(update: Update, context: ContextTypes.DEFAULT_TYPE):
     products = db.get_all_products(active_only=True)
     msg = ""
     for p in products:
-        # fetch approved reviews for product
         conn = db.get_db()
         c = conn.cursor()
         c.execute("SELECT rating, comment FROM reviews WHERE product_id = ? AND is_approved = 1 LIMIT 5", (p[0],))
