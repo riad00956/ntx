@@ -20,7 +20,6 @@ from admin_handlers import (
 )
 from states import *
 
-# লগিং সেটআপ
 logging.basicConfig(
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
     level=logging.INFO
@@ -28,7 +27,6 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 async def main():
-    """Async main function"""
     try:
         logger.info("Initializing database...")
         init_db()
@@ -99,18 +97,15 @@ async def main():
         app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, broadcast_message))
         
         logger.info("Starting polling...")
-        # Start polling (this is async)
         await app.initialize()
         await app.start()
         await app.updater.start_polling()
-        # Keep running until interrupted
         await asyncio.Event().wait()
     except Exception as e:
         logger.error("Fatal error", exc_info=True)
         raise
 
 if __name__ == "__main__":
-    # Python 3.14 requires explicit loop creation
     try:
         loop = asyncio.new_event_loop()
         asyncio.set_event_loop(loop)
