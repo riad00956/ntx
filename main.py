@@ -27,7 +27,8 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-def main():
+async def main():
+    """Async main function"""
     try:
         logger.info("Initializing database...")
         init_db()
@@ -35,7 +36,7 @@ def main():
         logger.info("Creating application...")
         app = Application.builder().token(BOT_TOKEN).build()
         
-        # User conversation handlers
+        # Conversation handlers
         buy_conv = ConversationHandler(
             entry_points=[MessageHandler(filters.Regex("^🛒 Buy Now$"), buy_start)],
             states={
@@ -69,8 +70,6 @@ def main():
         # Register handlers
         app.add_handler(CommandHandler("start", start))
         app.add_handler(CommandHandler("admin", admin_panel))
-        
-        # Admin command handlers
         app.add_handler(CommandHandler("approve_order", approve_order_cmd))
         app.add_handler(CommandHandler("reject_order", reject_order_cmd))
         app.add_handler(CommandHandler("approve_review", approve_review_cmd))
@@ -86,12 +85,11 @@ def main():
         app.add_handler(CommandHandler("delete_product", delete_product_cmd))
         app.add_handler(CommandHandler("toggle_product", toggle_product_cmd))
         
-        # Message handlers
         app.add_handler(buy_conv)
         app.add_handler(export_conv)
         app.add_handler(review_conv)
         app.add_handler(MessageHandler(filters.Regex("^🔙 Back$"), handle_menu))
-        app.add_handler(MessageHandler(filters.Regex("^🛒 Buy Now$"), lambda u,c: None))  # handled by conv
+        app.add_handler(MessageHandler(filters.Regex("^🛒 Buy Now$"), lambda u,c: None))
         app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_menu))
         app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, stars_action))
         app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, redeem_action))
@@ -101,10 +99,23 @@ def main():
         app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, broadcast_message))
         
         logger.info("Starting polling...")
-        app.run_polling()
+        # Start polling (this is async)
+        await app.initialize()
+        await app.start()
+        await app.updater.start_polling()
+        # Keep running until interrupted
+        await asyncio.Event().wait()
     except Exception as e:
         logger.error("Fatal error", exc_info=True)
         raise
 
 if __name__ == "__main__":
-    main()
+    # Python 3.14 requires explicit loop creation
+    try:
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+        loop.run_until_complete(main())
+    except KeyboardInterrupt:
+        pass
+    finally:
+        loop.close()
