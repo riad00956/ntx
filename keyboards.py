@@ -32,7 +32,7 @@ def stars_menu_keyboard():
 def redeem_products_keyboard(products):
     buttons = []
     for p in products:
-        name = p[1]  # product name
+        name = p[1]
         icon = p[2] if p[2] else ""
         buttons.append([KeyboardButton(f"{icon} {name}")])
     buttons.append([KeyboardButton("🔙 Back")])
@@ -56,3 +56,6 @@ def admin_main_keyboard():
         [KeyboardButton("🔙 Back to User")]
     ]
     return ReplyKeyboardMarkup(buttons, resize_keyboard=True)
+
+def buy_keyboard():
+    return ReplyKeyboardMarkup([[KeyboardButton("🛒 Buy Now"), KeyboardButton("🔙 Back")]], resize_keyboard=True)
