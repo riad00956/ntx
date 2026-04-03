@@ -10,7 +10,6 @@ import re
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user = update.effective_user
     db.register_user(user.id, user.username, user.first_name)
-    
     welcome_text = (
         "✨ Welcome to Premium Hub! 🛍️\n"
         "Buy subscriptions\n"
@@ -29,6 +28,7 @@ async def handle_menu(update: Update, context: ContextTypes.DEFAULT_TYPE):
     elif text == "🌟 My Stars":
         await show_stars(update, context)
     elif text == "📤 Export":
+        # Start export conversation
         await start_export(update, context)
     elif text == "⭐ Reviews":
         await review_menu(update, context)
@@ -45,6 +45,7 @@ async def handle_menu(update: Update, context: ContextTypes.DEFAULT_TYPE):
             if text == f"{icon} {prod_name}" or text == prod_name:
                 await show_product_details(update, context, prod[0])
                 return
+        # If none matched, show main menu
         await update.message.reply_text("Please use the buttons below.", reply_markup=kb.main_menu_keyboard())
 
 async def show_shop(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -65,7 +66,6 @@ async def show_product_details(update: Update, context: ContextTypes.DEFAULT_TYP
         f"{rating_text}\n"
         f"📝 Description: {desc}\n\n"
     )
-    # Store product id in context for buy
     context.user_data['buy_product_id'] = product_id
     await update.message.reply_text(text, reply_markup=kb.buy_keyboard())
 
@@ -121,7 +121,6 @@ async def buy_payment_proof(update: Update, context: ContextTypes.DEFAULT_TYPE):
     password = context.user_data['buy_password']
     order_id = db.add_order(user_id, prod_id, email, password, proof)
     
-    # Notify admins
     prod = db.get_product(prod_id)
     for admin_id in ADMIN_IDS:
         try:
@@ -349,7 +348,6 @@ async def view_reviews(update: Update, context: ContextTypes.DEFAULT_TYPE):
             msg += "No reviews yet.\n"
     await update.message.reply_text(msg, reply_markup=kb.review_menu_keyboard())
 
-# Profile
 async def show_profile(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user = db.get_user(update.effective_user.id)
     text = f"👤 Profile\nID: {user[0]}\n🌠 Falling Stars: {user[3]}\n🌟 Stellar Stars: {user[4]}"
