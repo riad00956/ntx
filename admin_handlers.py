@@ -1,4 +1,4 @@
-from telegram import Update, ReplyKeyboardMarkup
+from telegram import Update
 from telegram.ext import ContextTypes
 import database as db
 import keyboards as kb
@@ -54,7 +54,7 @@ async def admin_handlers(update: Update, context: ContextTypes.DEFAULT_TYPE):
     elif text == "🔙 Back to User":
         await update.message.reply_text("Back to user mode.", reply_markup=kb.main_menu_keyboard())
     else:
-        await update.message.reply_text("Use admin menu buttons.")
+        await update.message.reply_text("Use admin menu buttons.", reply_markup=kb.admin_main_keyboard())
 
 async def manage_products(update: Update, context: ContextTypes.DEFAULT_TYPE):
     products = db.get_all_products(active_only=False)
