@@ -65,7 +65,7 @@ async def main():
             fallbacks=[MessageHandler(filters.Regex("^🔙 Back$"), lambda u,c: ConversationHandler.END)],
         )
         
-        # Register handlers
+        # Register command handlers
         app.add_handler(CommandHandler("start", start))
         app.add_handler(CommandHandler("admin", admin_panel))
         app.add_handler(CommandHandler("approve_order", approve_order_cmd))
@@ -83,18 +83,45 @@ async def main():
         app.add_handler(CommandHandler("delete_product", delete_product_cmd))
         app.add_handler(CommandHandler("toggle_product", toggle_product_cmd))
         
+        # Conversation handlers
         app.add_handler(buy_conv)
         app.add_handler(export_conv)
         app.add_handler(review_conv)
+        
+        # Message handlers - order is important!
+        # 1. Admin panel buttons (exact match)
+        admin_keyboard_pattern = "^(📦 Products|🌟 Star System|📝 Reviews|📤 Export Control|💰 Revenue|⚙️ Settings|👤 Users|📢 Broadcast|📦 Orders Pending|🔙 Back to User)$"
+        app.add_handler(MessageHandler(filters.Regex(admin_keyboard_pattern), admin_handlers))
+        
+        # 2. Stars menu buttons
+        stars_pattern = "^(🔄 Convert to Stellar|🛍️ Redeem Products)$"
+        app.add_handler(MessageHandler(filters.Regex(stars_pattern), stars_action))
+        
+        # 3. Redeem product selection (dynamic, but handled inside redeem_action)
+        app.add_handler(MessageHandler(filters.Regex(r"^(🎬|🎵|🔐|📹|💻) .+"), redeem_action))
+        
+        # 4. Product action (Buy Now / Back from product detail)
+        app.add_handler(MessageHandler(filters.Regex("^(🛒 Buy Now|🔙 Back)$"), product_action))
+        
+        # 5. Back button (general)
         app.add_handler(MessageHandler(filters.Regex("^🔙 Back$"), handle_menu))
-        app.add_handler(MessageHandler(filters.Regex("^🛒 Buy Now$"), lambda u,c: None))
-        app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_menu))
-        app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, stars_action))
-        app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, redeem_action))
-        app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, product_action))
-        app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, review_action))
-        app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, admin_handlers))
+        
+        # 6. Review menu buttons
+        review_pattern = "^(1️⃣ Give Review|2️⃣ View Reviews)$"
+        app.add_handler(MessageHandler(filters.Regex(review_pattern), review_action))
+        
+        # 7. Main user menu buttons (Shop, My Stars, Export, Reviews, Profile)
+        user_menu_pattern = "^(🛍️ Shop|🌟 My Stars|📤 Export|⭐ Reviews|👤 Profile)$"
+        app.add_handler(MessageHandler(filters.Regex(user_menu_pattern), handle_menu))
+        
+        # 8. Product selection from shop (dynamic)
+        app.add_handler(MessageHandler(filters.Regex(r"^(🎬 Netflix|🎵 Spotify|🔐 VPN|🎬 Disney\+ Hotstar|📹 YouTube|🎬 Amazon Prime|🎬 Hulu|💻 Office 365)$"), handle_menu))
+        
+        # 9. Broadcast message handler (only when in broadcast mode)
         app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, broadcast_message))
+        
+        # Fallback: any other text
+        app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_menu))
         
         logger.info("Starting polling...")
         await app.initialize()
