@@ -1,5 +1,4 @@
 import sqlite3
-import json
 from config import DEFAULT_SETTINGS
 
 DB_PATH = "ecommerce_bot.db"
@@ -106,7 +105,6 @@ def init_db():
 def get_db():
     return sqlite3.connect(DB_PATH)
 
-# Helper functions for settings
 def get_setting(key):
     conn = get_db()
     c = conn.cursor()
@@ -122,7 +120,6 @@ def set_setting(key, value):
     conn.commit()
     conn.close()
 
-# User functions
 def register_user(user_id, username, first_name):
     conn = get_db()
     c = conn.cursor()
