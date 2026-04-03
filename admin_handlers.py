@@ -1,4 +1,4 @@
-from telegram import Update
+from telegram import Update, ReplyKeyboardMarkup
 from telegram.ext import ContextTypes
 import database as db
 import keyboards as kb
@@ -9,7 +9,6 @@ async def admin_panel(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if user_id not in ADMIN_IDS:
         await update.message.reply_text("You are not authorized.")
         return
-    # Dashboard stats
     revenue = db.get_total_revenue()
     pending_orders = len(db.get_pending_orders())
     pending_reviews = len(db.get_pending_reviews())
@@ -166,7 +165,6 @@ async def approve_order_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
     order_id = int(args[0])
     uid, stars = db.approve_order(order_id)
     await update.message.reply_text(f"Order {order_id} approved. User {uid} earned {stars} Falling Stars.")
-    # Notify user
     try:
         await context.bot.send_message(uid, f"✅ Your order #{order_id} has been approved! You received {stars} Falling Stars.")
     except:
@@ -211,7 +209,6 @@ async def approve_export_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE)
     eid = int(args[0])
     db.approve_export(eid)
     await update.message.reply_text(f"Export {eid} approved.")
-    # Notify user: need user_id from request
     conn = db.get_db()
     c = conn.cursor()
     c.execute("SELECT user_id FROM export_requests WHERE id = ?", (eid,))
@@ -228,7 +225,6 @@ async def reject_export_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
     eid = int(args[0])
     db.reject_export(eid)
     await update.message.reply_text(f"Export {eid} rejected.")
-    # Notify user
     conn = db.get_db()
     c = conn.cursor()
     c.execute("SELECT user_id FROM export_requests WHERE id = ?", (eid,))
@@ -284,9 +280,7 @@ async def set_stars_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
 async def add_product_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if update.effective_user.id not in ADMIN_IDS:
         return
-    # For simplicity, just a template
     await update.message.reply_text("Use /add_product name icon price validity star_earn description")
-    # Full implementation can be done via conversation, but for brevity, we'll leave as exercise.
 
 async def edit_product_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text("Use /edit_product <id> <field> <value>. Fields: name, price, validity_days, star_earn, description, is_active")
